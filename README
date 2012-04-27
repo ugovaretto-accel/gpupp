@@ -1,2 +1,2 @@
 C++ wrapper for CUDA and OpenCL APIs to ease the task of setting up environments, managing resources, invoking kernels and handling errors. Advanced (i.e. messy and unreadable) compile an run time C++ techniques are used to hide low level details to client code.
-This code was used with CUDA 3.x and OpenCL 1.0. 
+This code was used with CUDA 3.x and OpenCL 1.0/1.1. 
