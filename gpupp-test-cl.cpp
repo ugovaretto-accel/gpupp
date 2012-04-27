@@ -83,7 +83,7 @@ void CLMatMulTest()
                                             buildOutput, //<- compiler output
                                             buildOptions, //<- compiler options
                                             TRY_TO_COMPUTE_OPTIMAL_WGROUP_SIZE,
-											CL_QUEUE_PROFILING_ENABLE );
+                                            CL_QUEUE_PROFILING_ENABLE );
         std::clog << buildOutput << std::endl;
         if( ec.wgroupSize > 0 ) std::clog << "Computed optimal workgroup size: " << ec.wgroupSize << std::endl;
         else std::clog << "Could not compute optimal workgroup size"  << std::endl;
