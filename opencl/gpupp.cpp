@@ -564,7 +564,7 @@ ProfilingInfo::ProfilingInfo( cl_event e )
 
 // OpenCL 1.1 has deprecated clSetCommandQueueProperty() because
 //it isn't thread safe.  Rather than have a difference between the
-//OpenCL 1.0 and 1.1 versions of QtOpenCL, we just implement
+//OpenCL 1.0 and 1.1 versions of OpenCL, we just implement
 //the OpenCL 1.1 behavior.
 //Out-of-order execution and profiling can be enabled by explicitly
 // calling CreateCommandQueue(...,properties).
