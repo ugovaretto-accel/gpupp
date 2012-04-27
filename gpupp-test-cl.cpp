@@ -22,7 +22,7 @@
 #include "opencl/gpupp.h"
 #include "utility/Timer.h"
 
-// iota has been removed (why?) from STL long ago.
+// iota was removed (why?) from STL long ago.
 template< class FwdIt, class T > 
 inline void iota( FwdIt begin, FwdIt end, T startVal )
 {
