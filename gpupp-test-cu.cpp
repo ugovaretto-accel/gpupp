@@ -60,11 +60,26 @@ struct PrintTimeGPU
 void CUMatMulTest()
 {
     typedef unsigned uint;
+
+    static const std::string SEPARATOR =     
 #ifdef WIN32
-    const std::string KERNEL_PATH( "C:\\projects\\gpupp\\test\\vecmatmul.ptx" );
+        "\\";
 #else
-    const std::string KERNEL_PATH( "~/projects/gpupp/test/vecmatmul.ptx" )
+        "/";
 #endif
+    std::string KERNEL_PATH;
+    if( getenv( "CUDA_KERNEL_PATH" ) ) {
+        KERNEL_PATH = std::string( getenv( "CUDA_KERNEL_PATH") ) +
+                      SEPARATOR + 
+                      std::string( "vecmatmul.ptx" );
+
+    } else {
+#ifdef WIN32
+    KERNEL_PATH = "C:\\projects\\gpupp\\test\\vecmatmul.ptx";
+#else
+    KERNEL_PATH = "~/projects/gpupp/test/vecmatmul.ptx";
+#endif
+    }
     const std::string KERNEL_NAME( "VecMatMul" );
     const uint MATRIX_WIDTH = 1024; 
     const uint MATRIX_HEIGHT = MATRIX_WIDTH; // <- passed to OpenCL as uint
