@@ -57,21 +57,19 @@ void CLMatMulTest()
         "/";
 #endif
     std::string KERNEL_PATH;
-    if( getenv( "OPENCL_KERNEL_PATH" ) ) {
+    if( getenv( "CUDA_KERNEL_PATH" ) ) {
         KERNEL_PATH = std::string( getenv( "OPENCL_KERNEL_PATH") ) +
                       SEPARATOR +
                       std::string( "vecmatmul.cl" );
 
     } else {
 #ifdef WIN32
-        KERNEL_PATH = "C:\\projects\\gpupp\\test\\vecmatmul.cl";
+    KERNEL_PATH = "C:\\projects\\gpupp\\test\\vecmatmul.cl";
 #else
-        KERNEL_PATH = "/project/csstaff/uvaretto/src/gpupp/test/vecmatmul.cl";
+    KERNEL_PATH = "/project/csstaff/uvaretto/src/gpupp/test/vecmatmul.cl";
 #endif
-        std::cout << "OpenCL default kernel path: " << KERNEL_PATH << std::endl;
-        std::cout << "Set the default OpenCL kernel path "
-                     "with the OPENCL_KERNEL_PATH env var" << std::endl;    
     }
+
     const std::string KERNEL_NAME( "VecMatMul" );
     const uint MATRIX_WIDTH = 1024; // <- passed to OpenCL as uint
     const uint MATRIX_HEIGHT = MATRIX_WIDTH; // <- passed to OpenCL as uint

@@ -29,7 +29,8 @@ set(OPENCL_INCLUDE_DIR ${OPENCL_DEF_INCLUDE_DIR} CACHE PATH "OpenCL include dir"
 set(OPENCL_LINK_DIR ${OPENCL_DEF_LINK_DIR} CACHE PATH "OpenCL lib dir" )
 
 include_directories( ${OPENCL_INCLUDE_DIR} )
-link_directories( ${OPENCL_LINK_DIR} )
+#on Cray XK systems libcuda is not in the default path
+link_directories( ${OPENCL_LINK_DIR} /opt/cray/nvidia/default/lib64 )
 
 set( COMMON_SRCS utility/ResourceHandler.h utility/Any.h utility/varargs.h utility/CmdLine.h utility/Timer.h )
 set( OPENCL_SRCS opencl/gpupp.cpp opencl/gpupp.h opencl/OpenCLDeviceInfoTable.h opencl/OpenCLStatusCodesTable.h )
@@ -39,6 +40,8 @@ set( TEST_CUDA_SRCS  gpupp-test-cu.cpp )
 
 include(FindCUDA)
 include_directories( ${CUDA_INCLUDE_DIRS} )
+
+message( ${CUDA_LIBRARIES} )
 
 add_executable( gpupp-test-cl ${OPENCL_SRCS} ${COMMON_SRCS} ${TEST_CL_SRCS} )
 add_executable( gpupp-test-cu ${CUDA_SRCS} ${COMMON_SRCS} ${TEST_CUDA_SRCS} )

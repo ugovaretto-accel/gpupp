@@ -77,8 +77,11 @@ void CUMatMulTest()
 #ifdef WIN32
     KERNEL_PATH = "C:\\projects\\gpupp\\test\\vecmatmul.ptx";
 #else
-    KERNEL_PATH = "~/projects/gpupp/test/vecmatmul.ptx";
+    KERNEL_PATH = "/project/csstaff/uvaretto/src/gpupp/test/vecmatmul.ptx";
 #endif
+    std::cout << "CUDA default kernel path: " << KERNEL_PATH << std::endl;
+    std::cout << "Set the default CUDA kernel path "
+                 "with the CUDA_KERNEL_PATH env var" << std::endl;
     }
     const std::string KERNEL_NAME( "VecMatMul" );
     const uint MATRIX_WIDTH = 1024; 
