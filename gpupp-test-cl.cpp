@@ -46,7 +46,7 @@ struct PrintTime
 };
 
 /// Shows how to use a high level C++ API to perform computation through OpenCL. 
-void CLMatMulTest()
+void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize )
 {
     typedef unsigned uint;
 
@@ -73,7 +73,7 @@ void CLMatMulTest()
                      "with the OPENCL_KERNEL_PATH env var" << std::endl;    
     }
     const std::string KERNEL_NAME( "VecMatMul" );
-    const uint MATRIX_WIDTH = 1024; // <- passed to OpenCL as uint
+    const uint MATRIX_WIDTH = matrixSize; // <- passed to OpenCL as uint
     const uint MATRIX_HEIGHT = MATRIX_WIDTH; // <- passed to OpenCL as uint
     const size_t VECTOR_SIZE = MATRIX_WIDTH; // for M x V; MATRIX_HEIGHT for V x M
     const size_t MATRIX_SIZE = MATRIX_WIDTH * MATRIX_HEIGHT;
@@ -93,9 +93,9 @@ void CLMatMulTest()
         std::string buildOptions; // e.g. -DDOUBLE
         const bool TRY_TO_COMPUTE_OPTIMAL_WGROUP_SIZE = true; 
         CLExecutionContext ec = 
-            CreateContextAndKernelFromFile( "NVIDIA CUDA", //<- platform name
+            CreateContextAndKernelFromFile( platformName, //<- platform name
                                             CL_DEVICE_TYPE_ALL, //<- select all devices available on platform
-                                            0, //<- device number; use first available
+                                            deviceNum, //<- device number; use first available
                                             KERNEL_PATH, //<- full path to file containing kernel source code
                                             KERNEL_NAME, //<- name of kernel function
                                             buildOutput, //<- compiler output
@@ -169,7 +169,19 @@ void ListPlatforms()
 int main( int argc, char** argv )
 {    
     ListPlatforms();
-    CLMatMulTest();
+    if( argc < 2 ) {
+        std::cout << "usage: " << argv[0] 
+                  << " <platform name e.g. NVIDIA CUDA> "
+                     "[device id - default is 0] "
+                     "[matrix size - default is 1024"
+                  << std::endl;
+        return 0;          
+    }
+    int deviceNum = 0;
+    if( argc > 2 ) deviceNum = atoi( argv[2] );
+    int matrixSize = 1024;
+    if( argc > 3 ) matrixSize = atoi( argv[3] );
+    CLMatMulTest( argv[1], deviceNum, matrixSize );
 #ifdef _MSC_VER
 #ifdef _DEBUG
     std::cout << "\n<press Enter to exit>" << std::endl;

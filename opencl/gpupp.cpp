@@ -48,20 +48,23 @@ std::string LoadText( const std::string& fname )
 }
 
 //------------------------------------------------------------------------------
-DeviceInfoMap QueryDevices( cl_platform_id platformID )
+Devices QueryDevices( cl_platform_id platformID )
 {
+    Devices dev;
     DeviceInfoMap dim;
     cl_uint numDevices = cl_uint();
     cl_device_id device = 0;
-    cl_int status = ::clGetDeviceIDs( platformID, CL_DEVICE_TYPE_DEFAULT, 0, 0, &numDevices ); // <- NUM DEVICES ?
+    cl_int status = ::clGetDeviceIDs( platformID, CL_DEVICE_TYPE_ALL, 0, 0, &numDevices ); // <- NUM DEVICES ?
     if( status != CL_SUCCESS ) throw std::runtime_error( "ERROR - clGetDeviceIDs(): " + clERRORS[ status ] );
     if( numDevices > 0 )
     {
         typedef std::vector< cl_device_id > DeviceIds;
         DeviceIds devices( numDevices );
-        status = ::clGetDeviceIDs( platformID, CL_DEVICE_TYPE_DEFAULT, devices.size(), &devices[ 0 ], 0 );
-        if( status != CL_SUCCESS ) throw std::runtime_error( "ERROR - clGetDeviceIDs() " + clERRORS[ status ] );
         
+
+        status = ::clGetDeviceIDs( platformID, CL_DEVICE_TYPE_ALL, devices.size(), &devices[ 0 ], 0 );
+        if( status != CL_SUCCESS ) throw std::runtime_error( "ERROR - clGetDeviceIDs() " + clERRORS[ status ] );
+       
         const OpenCLDeviceInfoTable& DIT = OpenCLDeviceInfoTable::Instance();
         
         // iterate over platforms and print properties to text buffers
@@ -111,10 +114,12 @@ DeviceInfoMap QueryDevices( cl_platform_id platformID )
                 }                
 
                 dim[ di->second ] = infoStream.str();
+                
             }
+            dev.push_back( dim );
         }
     }
-    return dim;
+    return dev;
 }
 
 
@@ -200,7 +205,7 @@ Platforms QueryPlatforms()
             if( status != CL_SUCCESS ) throw std::runtime_error( "ERROR - clGetPlatformInfo(): " + clERRORS[ status ] );
             pi.extensions = &buf[ 0 ];
             
-            pi.devices.push_back( QueryDevices( *i ) );
+            pi.devices =  QueryDevices( *i );
 
             retPlatforms.push_back( pi );
         }
