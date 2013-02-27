@@ -74,7 +74,7 @@ DeviceInfoArray QueryDevicesInfo()
 	{
         throw std::runtime_error( "Error - cuDeviceGetCount() " + cuERRORS[ status ] );
 	}
-	//??? taken form NVIDIA sample code: CUdevice compared with int ? what's the point of the typedef ?
+	
     for( dev = 0; dev < numDevices; ++dev )
     {
 		int major = 0;
