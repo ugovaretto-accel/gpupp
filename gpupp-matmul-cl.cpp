@@ -166,8 +166,6 @@ void CLMatMulTest( const char* platformName,
         // (5) execute kernel
         SizeArray globalWGroupSize( 2, MATRIX_WIDTH ); 
         SizeArray  localWGroupSize( 2, 16 );//1, ec.wgroupSize > 0 ? ec.wgroupSize : 256  );
-        localWGroupSize[0] = 32;
-        localWGroupSize[1] = 4;
         cl_event kernelEvent = cl_event();
         // kernel signature:
         // void MatMul( const __global real_t* restrict A,
