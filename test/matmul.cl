@@ -6,7 +6,8 @@ typedef float real_t;
 #endif
 
 // return matrix element given block and indices of element in block
-inline real_t get_matrix_element( __global const real_t* restrict m, //matrix
+__inline__ real_t get_matrix_element(
+                             __global const real_t* restrict m, //matrix
                              int blockCol,    //column index of output block 
                              int blockRow,    //row index of output row
                              int col,         //local column index of block element
@@ -21,6 +22,7 @@ inline real_t get_matrix_element( __global const real_t* restrict m, //matrix
 }
 
 #define TILE_SIZE 16
+#if 1
 __kernel void
 MatMul( __global const real_t* restrict A, 
         __global const real_t* restrict B,
@@ -56,6 +58,22 @@ MatMul( __global const real_t* restrict A,
     C[ idx ] = out;     
 
 }
-                         
+#else
+__kernel void
+MatMul( __global const real_t* A, 
+        __global const real_t* B,
+        __global real_t* C,
+        int width,
+        int height ) {
+
+    int row = get_global_id( 1 );
+    int col = get_global_id( 0 );
+    real_t out = 0;
+    for( int b = 0; b != width ; ++b ) {
+        out += A[ row * width + b ] * B[ b * width + col ];     
+    }
+    C[ row * width + col ] = out;     
+}
+#endif                         
                                       
   

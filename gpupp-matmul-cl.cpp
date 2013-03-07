@@ -19,31 +19,77 @@
 
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <cmath>
+#include <cstdlib>
 #include "opencl/gpupp.h"
 #include "utility/Timer.h"
 
-// iota was removed (why?) from STL long ago.
-template< class FwdIt, class T > 
-inline void iota( FwdIt begin, FwdIt end, T startVal ) {
-    // compute increasing sequence into [begin, end)
-    for(; begin != end; ++begin, ++startVal ) *begin = startVal;
-}
-
+#ifdef DOUBLE
+typedef double real_t;
+#else
 typedef float real_t;
+#endif
 
 typedef std::vector< real_t > Array;
+
+//------------------------------------------------------------------------------
+Array MatMul(const real_t* A, const real_t* B, int width, int height ) {
+    Array C( width * height );
+    for(int row = 0; row != height; ++row ) {
+        for(int col = 0; col != width; ++col ) {
+            real_t v = real_t( 0 );
+            for( int i = 0; i != width; ++i ) {
+                v += A[ row * width + i ] * B[ i * width + col ];
+            }
+            C[ row * width + col ] = v;
+        }
+    }
+    return C;
+}
+
+//------------------------------------------------------------------------------
+struct eps {
+    eps( real_t v ) : eps_( v ) {} 
+    bool operator()( const real_t& v1, const real_t& v2 ) const {
+        return std::abs( v1 - v2 ) < eps_;
+    }
+    real_t eps_;
+};
+
+bool Verify( const Array& C1, const Array& C2, real_t EPS ) {
+    return std::equal( C1.begin(), C1.end(), C2.begin(), eps(EPS) );
+}
+
+//------------------------------------------------------------------------------
+struct RandomGenerator {
+   RandomGenerator()  {
+       srand( 0 );    
+   }
+   RandomGenerator( int seed )  {
+       srand( seed );    
+   }
+   real_t operator()() const {
+       return rand() / real_t( RAND_MAX );
+   } 
+};
+
 
 //------------------------------------------------------------------------------
 /// Callback function object passed to scoped timer; will be invoked
 /// with elapsed time upon timer destruction.
 struct PrintTime {
     void operator()( double t ) const {
-        std::clog << "Time: " << t << " (ms)" << std::endl;
+        std::cout << "Time: " << t << " (ms)" << std::endl;
     }
 };
 
 /// Shows how to use a high level C++ API to perform computation through OpenCL. 
-void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
+void CLMatMulTest( const char* platformName,
+                   int deviceNum,
+                   int matrixSize,
+                   real_t EPS, 
+                   const std::string& buildOptions ) {
     typedef unsigned uint;
 
     static const std::string SEPARATOR =
@@ -74,16 +120,15 @@ void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
     const size_t MATRIX_SIZE = MATRIX_WIDTH * MATRIX_HEIGHT;
     const size_t MATRIX_BYTE_SIZE = sizeof( real_t ) * MATRIX_SIZE;
     try {
-
         // (1) init data
-        Array A( MATRIX_SIZE, real_t( 0 ) );
-        Array B( MATRIX_SIZE, real_t( 0 ) );
-        Array C( MATRIX_SIZE, real_t( 0 ) );
-        iota( A.begin(), A.end(), real_t( 0 ) );
-        iota( B.begin(), B.end(), real_t( -MATRIX_SIZE ) );
+        Array A( MATRIX_SIZE );
+        Array B( MATRIX_SIZE );
+        Array C( MATRIX_SIZE );
+        std::generate( A.begin(), A.end(), RandomGenerator( 1 ) );
+        std::generate( B.begin(), B.end(), RandomGenerator( 1000 ) );
+       
         // (2) create kernel
         std::string buildOutput;  // compiler output
-        std::string buildOptions; // e.g. -DDOUBLE
         const bool TRY_TO_COMPUTE_OPTIMAL_WGROUP_SIZE = true; 
         CLExecutionContext ec = 
             CreateContextAndKernelFromFile( platformName, //<- platform name
@@ -95,10 +140,16 @@ void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
                                             buildOptions, //<- compiler options
                                             TRY_TO_COMPUTE_OPTIMAL_WGROUP_SIZE,
                                             CL_QUEUE_PROFILING_ENABLE );
-        std::clog << buildOutput << std::endl;
-        if( ec.wgroupSize > 0 ) std::clog << "Computed optimal workgroup size: " 
+        if( !buildOptions.empty() ) {
+            std::cout << "Build options: " << buildOptions << std::endl;
+        }
+        if( buildOutput.size() > 1 ) {
+            std::cout << "Build output: " << buildOutput.size() << std::endl;
+        }    
+
+        if( ec.wgroupSize > 0 ) std::cout << "Computed optimal workgroup size: " 
                                           << ec.wgroupSize << std::endl;
-        else std::clog << "Could not compute optimal workgroup size"  << std::endl;
+        else std::cout << "Could not compute optimal workgroup size"  << std::endl;
         // (2.1) enable command queue profiling
         // DEPRECATED IN OpenCL 1.1 SINCE NOT THREAD SAFE 
 		//EnableProfiling( ec.commandQueue );
@@ -107,7 +158,7 @@ void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
         // to kernel function
         CLMemObj  dA( ec.context, MATRIX_BYTE_SIZE, CL_MEM_READ_ONLY );
         CLMemObj  dB( ec.context, MATRIX_BYTE_SIZE, CL_MEM_READ_ONLY );
-        CLMemObj  dC( ec.context, MATRIX_BYTE_SIZE, CL_MEM_WRITE_ONLY );
+        CLMemObj  dC( ec.context, MATRIX_BYTE_SIZE );//, CL_MEM_WRITE_ONLY );
 
         // (4) copy data into input buffers
         CLCopyHtoD( ec.commandQueue, &A[ 0 ], dA );
@@ -115,6 +166,8 @@ void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
         // (5) execute kernel
         SizeArray globalWGroupSize( 2, MATRIX_WIDTH ); 
         SizeArray  localWGroupSize( 2, 16 );//1, ec.wgroupSize > 0 ? ec.wgroupSize : 256  );
+        localWGroupSize[0] = 32;
+        localWGroupSize[1] = 4;
         cl_event kernelEvent = cl_event();
         // kernel signature:
         // void MatMul( const __global real_t* restrict A,
@@ -136,15 +189,20 @@ void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
         }
         // (6) read back results
         CLCopyDtoH( ec.commandQueue, dC, &C[ 0 ] );
-        // print first two and last elements
-        std::cout << "vector[0]    = " << C[ 0 ] << '\n';
-        std::cout << "vector[1]    = " << C[ 1 ] << '\n';
-        std::cout << "vector[last] = " << C.back() << std::endl;
+        Array hC = MatMul( &A[0], &B[0], MATRIX_WIDTH, MATRIX_HEIGHT );
+        std::cout << std::boolalpha << "PASSED: " << Verify( C, hC, EPS ) << '\n';
         // (6.1) print profilng information
         std::cout << "Kernel execution latency (ms): " 
                   << ProfilingInfo( kernelEvent ).Latency()       << std::endl;
         std::cout << "Kernel execution time (ms):    " 
                   << ProfilingInfo( kernelEvent ).ExecutionTime() << std::endl;
+
+        const size_t TOTAL_OPS = MATRIX_WIDTH 
+                                 * MATRIX_WIDTH
+                                 * ( MATRIX_WIDTH + MATRIX_WIDTH - 1 );
+        const int GFLops = (double(TOTAL_OPS) / (1024 * 1024 * 1024))
+                           / (ProfilingInfo( kernelEvent ).ExecutionTime() / 1000);
+        std::cout << "GFLops: " << GFLops << std::endl;                                                     
         // (7) release resources
         //ReleaseExecutionContext( ec );
     }
@@ -172,15 +230,13 @@ int main( int argc, char** argv ) {
         return 0;          
     }
     int deviceNum = 0;
-    if( argc > 2 ) deviceNum = atoi( argv[2] );
+    if( argc > 2 ) deviceNum = atoi( argv[ 2 ] );
     int matrixSize = 1024;
-    if( argc > 3 ) matrixSize = atoi( argv[3] );
-    CLMatMulTest( argv[1], deviceNum, matrixSize );
-#ifdef _MSC_VER
-#ifdef _DEBUG
-    std::cout << "\n<press Enter to exit>" << std::endl;
-    ::getchar();
-#endif
-#endif
+    if( argc > 3 ) matrixSize = atoi( argv[ 3 ] );
+    real_t eps = real_t( 0.0001 );
+    if( argc > 4 ) eps = atof( argv[ 4 ] );
+    std::string buildOptions;
+    if( argc > 5 ) buildOptions = argv[ 5 ];
+    CLMatMulTest( argv[1], deviceNum, matrixSize, eps, buildOptions );
     return 0;
 }
