@@ -110,11 +110,11 @@ void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
         CLMemObj  dC( ec.context, MATRIX_BYTE_SIZE, CL_MEM_WRITE_ONLY );
 
         // (4) copy data into input buffers
-        CLCopyHtoD( ec.commandQueue, dA, &A[ 0 ] );
-        CLCopyHtoD( ec.commandQueue, dB, &B[ 0 ] );
+        CLCopyHtoD( ec.commandQueue, &A[ 0 ], dA );
+        CLCopyHtoD( ec.commandQueue, &B[ 0 ], dB );
         // (5) execute kernel
-        SizeArray globalWGroupSize( 1, MATRIX_HEIGHT ); 
-        SizeArray  localWGroupSize( 1, ec.wgroupSize > 0 ? ec.wgroupSize : 256  );
+        SizeArray globalWGroupSize( 2, MATRIX_WIDTH ); 
+        SizeArray  localWGroupSize( 2, 16 );//1, ec.wgroupSize > 0 ? ec.wgroupSize : 256  );
         cl_event kernelEvent = cl_event();
         // kernel signature:
         // void MatMul( const __global real_t* restrict A,
@@ -127,10 +127,10 @@ void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
             kernelEvent = InvokeKernelSync( ec, globalWGroupSize, localWGroupSize,
                                 ( VArgList(),  //<- Marks the beginning of a variable argument list
                                   cl_mem( dA ),
-                                  cl_mem( dB )
+                                  cl_mem( dB ),
                                   cl_mem( dC ),
                                   MATRIX_WIDTH,
-                                  MATRIX_HEIGHT )
+                                  MATRIX_HEIGHT 
                                 )              //<- Marks the end of a variable argument list
                              );
         }

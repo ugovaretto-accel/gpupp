@@ -35,7 +35,7 @@ link_directories( ${OPENCL_LINK_DIR} /opt/cray/nvidia/default/lib64 )
 set( COMMON_SRCS utility/ResourceHandler.h utility/Any.h utility/varargs.h utility/CmdLine.h utility/Timer.h )
 set( OPENCL_SRCS opencl/gpupp.cpp opencl/gpupp.h opencl/OpenCLDeviceInfoTable.h opencl/OpenCLStatusCodesTable.h )
 set( TEST_CL_SRCS  gpupp-test-cl.cpp )
-set( MATMUL_CL_SRCS  gpupp-test-cl.cpp )
+set( MATMUL_CL_SRCS  gpupp-matmul-cl.cpp )
 set( CUDA_SRCS utility/alignment.h cuda/gpupp.cpp cuda/gpupp.h cuda/CUDADeviceInfoTable.h cuda/CUDAStatusCodesTable.h )
 set( TEST_CUDA_SRCS  gpupp-test-cu.cpp )
 
