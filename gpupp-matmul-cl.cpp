@@ -56,33 +56,31 @@ void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
     if( getenv( "OPENCL_KERNEL_PATH" ) ) {
         KERNEL_PATH = std::string( getenv( "OPENCL_KERNEL_PATH") ) +
                       SEPARATOR +
-                      std::string( "vecmatmul.cl" );
+                      std::string( "matmul.cl" );
 
     } else {
 #ifdef WIN32
-        KERNEL_PATH = "C:\\projects\\gpupp\\test\\vecmatmul.cl";
+        KERNEL_PATH = "C:\\projects\\gpupp\\test\\matmul.cl";
 #else
-        KERNEL_PATH = "/project/csstaff/uvaretto/src/gpupp/test/vecmatmul.cl";
+        KERNEL_PATH = "/project/csstaff/uvaretto/src/gpupp/test/matmul.cl";
 #endif
         std::cout << "OpenCL default kernel path: " << KERNEL_PATH << std::endl;
         std::cout << "Set the default OpenCL kernel path "
                      "with the OPENCL_KERNEL_PATH env var" << std::endl;    
     }
-    const std::string KERNEL_NAME( "VecMatMul" );
+    const std::string KERNEL_NAME( "MatMul" );
     const uint MATRIX_WIDTH = matrixSize; // <- passed to OpenCL as uint
     const uint MATRIX_HEIGHT = MATRIX_WIDTH; // <- passed to OpenCL as uint
-    const size_t VECTOR_SIZE = MATRIX_WIDTH; // for M x V; MATRIX_HEIGHT for V x M
     const size_t MATRIX_SIZE = MATRIX_WIDTH * MATRIX_HEIGHT;
     const size_t MATRIX_BYTE_SIZE = sizeof( real_t ) * MATRIX_SIZE;
-    const size_t VECTOR_BYTE_SIZE = sizeof( real_t ) * VECTOR_SIZE;
     try {
 
         // (1) init data
-        Array inMatrix( MATRIX_SIZE, real_t( 0 ) );
-        Array inVector( VECTOR_SIZE, real_t( 0 ) );
-        Array outVector( inVector );
-        iota( inMatrix.begin(), inMatrix.end(), real_t( 0 ) );
-        iota( inVector.begin(), inVector.end(), real_t( 0 ) );
+        Array A( MATRIX_SIZE, real_t( 0 ) );
+        Array B( MATRIX_SIZE, real_t( 0 ) );
+        Array C( MATRIX_SIZE, real_t( 0 ) );
+        iota( A.begin(), A.end(), real_t( 0 ) );
+        iota( B.begin(), B.end(), real_t( -MATRIX_SIZE ) );
         // (2) create kernel
         std::string buildOutput;  // compiler output
         std::string buildOptions; // e.g. -DDOUBLE
@@ -107,40 +105,41 @@ void CLMatMulTest( const char* platformName, int deviceNum, int matrixSize ) {
 
         // (3) allocate input and otput buffer that will be passed
         // to kernel function
-        CLMemObj  inMatD( ec.context, MATRIX_BYTE_SIZE, CL_MEM_READ_ONLY );
-        CLMemObj  inVecD( ec.context, VECTOR_BYTE_SIZE, CL_MEM_READ_ONLY );
-        CLMemObj outVecD( ec.context, VECTOR_BYTE_SIZE, CL_MEM_WRITE_ONLY );
+        CLMemObj  dA( ec.context, MATRIX_BYTE_SIZE, CL_MEM_READ_ONLY );
+        CLMemObj  dB( ec.context, MATRIX_BYTE_SIZE, CL_MEM_READ_ONLY );
+        CLMemObj  dC( ec.context, MATRIX_BYTE_SIZE, CL_MEM_WRITE_ONLY );
+
         // (4) copy data into input buffers
-        CLCopyHtoD( ec.commandQueue, &inMatrix[ 0 ], inMatD );
-        CLCopyHtoD( ec.commandQueue, &inVector[ 0 ], inVecD );
+        CLCopyHtoD( ec.commandQueue, dA, &A[ 0 ] );
+        CLCopyHtoD( ec.commandQueue, dB, &B[ 0 ] );
         // (5) execute kernel
         SizeArray globalWGroupSize( 1, MATRIX_HEIGHT ); 
         SizeArray  localWGroupSize( 1, ec.wgroupSize > 0 ? ec.wgroupSize : 256  );
         cl_event kernelEvent = cl_event();
         // kernel signature:
-        // void VecMatMul( const __global real_t* M,
-        //                 uint width,
-        //                 uint height,
-        //                 const __global real_t* V,
-        //                 __global real_t* W )
+        // void MatMul( const __global real_t* restrict A,
+        //              const __global real_t* restrict B, 
+        //              __global real_t* restrict C, 
+        //              uint width,
+        //              uint height )
         {
             ScopedCBackTimer< PrintTime > pt;
             kernelEvent = InvokeKernelSync( ec, globalWGroupSize, localWGroupSize,
                                 ( VArgList(),  //<- Marks the beginning of a variable argument list
-                                  inMatD.GetCLMemHandle(),
-                                  MATRIX_WIDTH ,
-                                  MATRIX_HEIGHT ,
-                                  cl_mem( inVecD ) ,
-                                  cl_mem( outVecD )
+                                  cl_mem( dA ),
+                                  cl_mem( dB )
+                                  cl_mem( dC ),
+                                  MATRIX_WIDTH,
+                                  MATRIX_HEIGHT )
                                 )              //<- Marks the end of a variable argument list
                              );
         }
         // (6) read back results
-        CLCopyDtoH( ec.commandQueue, outVecD, &outVector[ 0 ] );
+        CLCopyDtoH( ec.commandQueue, dC, &C[ 0 ] );
         // print first two and last elements
-        std::cout << "vector[0]    = " << outVector[ 0 ] << '\n';
-        std::cout << "vector[1]    = " << outVector[ 1 ] << '\n';
-        std::cout << "vector[last] = " << outVector.back() << std::endl;
+        std::cout << "vector[0]    = " << C[ 0 ] << '\n';
+        std::cout << "vector[1]    = " << C[ 1 ] << '\n';
+        std::cout << "vector[last] = " << C.back() << std::endl;
         // (6.1) print profilng information
         std::cout << "Kernel execution latency (ms): " 
                   << ProfilingInfo( kernelEvent ).Latency()       << std::endl;

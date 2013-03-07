@@ -35,6 +35,7 @@ link_directories( ${OPENCL_LINK_DIR} /opt/cray/nvidia/default/lib64 )
 set( COMMON_SRCS utility/ResourceHandler.h utility/Any.h utility/varargs.h utility/CmdLine.h utility/Timer.h )
 set( OPENCL_SRCS opencl/gpupp.cpp opencl/gpupp.h opencl/OpenCLDeviceInfoTable.h opencl/OpenCLStatusCodesTable.h )
 set( TEST_CL_SRCS  gpupp-test-cl.cpp )
+set( MATMUL_CL_SRCS  gpupp-test-cl.cpp )
 set( CUDA_SRCS utility/alignment.h cuda/gpupp.cpp cuda/gpupp.h cuda/CUDADeviceInfoTable.h cuda/CUDAStatusCodesTable.h )
 set( TEST_CUDA_SRCS  gpupp-test-cu.cpp )
 
@@ -44,8 +45,10 @@ include_directories( ${CUDA_INCLUDE_DIRS} )
 message( ${CUDA_LIBRARIES} )
 
 add_executable( gpupp-test-cl ${OPENCL_SRCS} ${COMMON_SRCS} ${TEST_CL_SRCS} )
+add_executable( gpupp-matmul-cl ${OPENCL_SRCS} ${COMMON_SRCS} ${MATMUL_CL_SRCS} )
 add_executable( gpupp-test-cu ${CUDA_SRCS} ${COMMON_SRCS} ${TEST_CUDA_SRCS} )
 
 set(CLLIB OpenCL)
 target_link_libraries( gpupp-test-cl ${CLLIB} )
+target_link_libraries( gpupp-matmul-cl ${CLLIB} )
 target_link_libraries( gpupp-test-cu ${CUDA_LIBRARIES} )

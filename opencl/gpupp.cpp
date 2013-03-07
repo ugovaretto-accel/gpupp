@@ -394,8 +394,7 @@ CLExecutionContext CreateContextAndKernelFromFile( const std::string& platformSt
 }
 
 //------------------------------------------------------------------------------
-void CLCopyHtoD( cl_command_queue cq, CLMemObj& mo, const void* pHostData, cl_bool blocking, size_t offset, size_t size )
-{
+void CLCopyHtoD( cl_command_queue cq, const void* pHostData, CLMemObj& mo, cl_bool blocking, size_t offset, size_t size ) {
     cl_int status = CL_SUCCESS + 1;
     if( size == 0 && offset == 0 )
     {

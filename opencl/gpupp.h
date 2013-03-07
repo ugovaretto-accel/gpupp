@@ -345,7 +345,7 @@ private:
 ///\param size number of bytes to copy: in case the value is zero the size
 ///    specified in the mo parameter is used
 ///\throw std::runtime_error.
-void CLCopyHtoD( cl_command_queue cq, CLMemObj& mo, const void* pHostData,
+void CLCopyHtoD( cl_command_queue cq, const void* pHostData, CLMemObj& mo,
                  cl_bool blocking = CL_TRUE, size_t offset = 0, size_t size = 0 );
 
 

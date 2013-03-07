@@ -5,7 +5,7 @@ typedef double real_t;
 typedef float real_t;
 #endif
 
-//#define COLUMN //2x speed increase
+#define COLUMN //2x speed increase
 
 __kernel void VecMatMul( const __global real_t* M,
                          uint width,
