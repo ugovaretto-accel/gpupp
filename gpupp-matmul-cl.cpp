@@ -89,7 +89,9 @@ void CLMatMulTest( const char* platformName,
                    int deviceNum,
                    int matrixSize,
                    real_t EPS, 
-                   const std::string& buildOptions ) {
+                   const std::string& buildOptions,
+                   int wgroupx,
+                   int wgroupy ) {
     typedef unsigned uint;
 
     static const std::string SEPARATOR =
@@ -119,6 +121,8 @@ void CLMatMulTest( const char* platformName,
     const uint MATRIX_HEIGHT = MATRIX_WIDTH; // <- passed to OpenCL as uint
     const size_t MATRIX_SIZE = MATRIX_WIDTH * MATRIX_HEIGHT;
     const size_t MATRIX_BYTE_SIZE = sizeof( real_t ) * MATRIX_SIZE;
+    const size_t LOCAL_WGROUP_WIDTH = wgroupx;
+    const size_t LOCAL_WGROUP_HEIGHT = wgroupy;
     try {
         // (1) init data
         Array A( MATRIX_SIZE );
@@ -158,14 +162,18 @@ void CLMatMulTest( const char* platformName,
         // to kernel function
         CLMemObj  dA( ec.context, MATRIX_BYTE_SIZE, CL_MEM_READ_ONLY );
         CLMemObj  dB( ec.context, MATRIX_BYTE_SIZE, CL_MEM_READ_ONLY );
-        CLMemObj  dC( ec.context, MATRIX_BYTE_SIZE );//, CL_MEM_WRITE_ONLY );
+        CLMemObj  dC( ec.context, MATRIX_BYTE_SIZE, CL_MEM_WRITE_ONLY );
 
         // (4) copy data into input buffers
         CLCopyHtoD( ec.commandQueue, &A[ 0 ], dA );
         CLCopyHtoD( ec.commandQueue, &B[ 0 ], dB );
         // (5) execute kernel
-        SizeArray globalWGroupSize( 2, MATRIX_WIDTH ); 
-        SizeArray  localWGroupSize( 2, 16 );//1, ec.wgroupSize > 0 ? ec.wgroupSize : 256  );
+        SizeArray globalWGroupSize( 2 ); 
+        SizeArray  localWGroupSize( 2 );//1, ec.wgroupSize > 0 ? ec.wgroupSize : 256  );
+        globalWGroupSize[ 0 ] = MATRIX_WIDTH;
+        globalWGroupSize[ 1 ] = MATRIX_HEIGHT;
+        localWGroupSize[ 0 ] = LOCAL_WGROUP_WIDTH;
+        localWGroupSize[ 1 ] = LOCAL_WGROUP_HEIGHT; 
         cl_event kernelEvent = cl_event();
         // kernel signature:
         // void MatMul( const __global real_t* restrict A,
@@ -222,8 +230,12 @@ int main( int argc, char** argv ) {
     if( argc < 2 ) {
         std::cout << "usage: " << argv[0] 
                   << " <platform name e.g. NVIDIA CUDA> "
-                     "[device id - default is 0] "
-                     "[matrix size - default is 1024"
+                     "[device id] "
+                     "[matrix size] "
+                     "[workgroup width] "
+                     "[workgroup height] "
+                     "[eps] "
+                     "[build options: -DDOUBLE -DTILE_SIZE=]"
                   << std::endl;
         return 0;          
     }
@@ -231,10 +243,15 @@ int main( int argc, char** argv ) {
     if( argc > 2 ) deviceNum = atoi( argv[ 2 ] );
     int matrixSize = 1024;
     if( argc > 3 ) matrixSize = atoi( argv[ 3 ] );
+    int wgroupx = 16;
+    if( argc > 4 ) wgroupx = atoi( argv[ 4 ] );
+    int wgroupy = 16; 
+    if( argc > 5 ) wgroupy = atoi( argv[ 5 ] );
     real_t eps = real_t( 0.0001 );
-    if( argc > 4 ) eps = atof( argv[ 4 ] );
+    if( argc > 6 ) eps = atof( argv[ 6 ] );
     std::string buildOptions;
-    if( argc > 5 ) buildOptions = argv[ 5 ];
-    CLMatMulTest( argv[1], deviceNum, matrixSize, eps, buildOptions );
+    if( argc > 7 ) buildOptions = argv[ 7 ];
+    CLMatMulTest( argv[1], deviceNum, matrixSize, eps, buildOptions,
+                  wgroupx, wgroupy );
     return 0;
 }

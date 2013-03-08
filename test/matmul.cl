@@ -5,6 +5,10 @@ typedef double real_t;
 typedef float real_t;
 #endif
 
+//USE 8x8 on XEON PHI IF NOT IT CRASHES
+//pass it as a build option
+//#define TILE_SIZE 8 
+
 // return matrix element given block and indices of element in block
 __inline__ real_t get_matrix_element(
                              __global const real_t* restrict m, //matrix
@@ -12,16 +16,13 @@ __inline__ real_t get_matrix_element(
                              int blockRow,    //row index of output row
                              int col,         //local column index of block element
                              int row,         //local row index of block element 
-                             int num_columns,  //number of columns of matrix 'm'
-                             int blockDimx,
-                             int blockDimy
-                           ) {                                           
+                             int num_columns) {                                           
   
-    return m[ ( blockRow * blockDimy + row ) * num_columns + blockCol * blockDimx + col ];
+    return m[ ( blockRow * TILE_SIZE + row ) * num_columns + blockCol * TILE_SIZE + col ];
 
 }
 
-#define TILE_SIZE 16
+
 #if 1
 __kernel void
 MatMul( __global const real_t* restrict A, 
@@ -32,20 +33,16 @@ MatMul( __global const real_t* restrict A,
 
     __local real_t M1[TILE_SIZE][TILE_SIZE];
     __local real_t M2[TILE_SIZE][TILE_SIZE];
+
     const int blockRow = get_group_id(1); 
     const int blockCol = get_group_id(0);
     const int row = get_local_id(1);
     const int col = get_local_id(0);
-    const int blockDimx = get_local_size(0);
-    const int blockDimy = get_local_size(1);
-    //printf("local size 0, 1: %d, %d\n", blockDimx, blockDimy);
     real_t out = 0;
     for( int b = 0; b < width / TILE_SIZE; ++b ) {
           //copy data into shared memory
-        M1[ row ][ col ] = get_matrix_element( A, b, blockRow, col, row, width,
-                                               blockDimx, blockDimy );
-        M2[ row ][ col ] = get_matrix_element( B, blockCol, b, col, row, width,
-                                               blockDimx, blockDimy );
+        M1[ row ][ col ] = get_matrix_element( A, b, blockRow, col, row, width );
+        M2[ row ][ col ] = get_matrix_element( B, blockCol, b, col, row, width );
         barrier(CLK_LOCAL_MEM_FENCE); // required to guarantee that data are computed before next step
                                       // where a thread accesses data computed by other threads
         for( int c = 0; c != TILE_SIZE; ++c ) {
@@ -54,7 +51,7 @@ MatMul( __global const real_t* restrict A,
         barrier(CLK_LOCAL_MEM_FENCE); // required to avoid that some threads start modifying
                          // data in cache before all threads have exited for loop    
     }
-    const int idx = ( blockRow * blockDimy + row ) * width + blockCol * blockDimx + col;
+    const int idx = ( blockRow * TILE_SIZE + row ) * width + blockCol * TILE_SIZE + col;
     C[ idx ] = out;     
 
 }
