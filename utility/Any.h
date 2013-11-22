@@ -1,7 +1,7 @@
 #ifndef ANY_H_
 #define ANY_H_
 //
-// Copyright (c) 2010 - Ugo Varetto
+// Copyright (c) 2010, 2011 - Ugo Varetto
 //
 // This source code is free; you can redistribute it and/or
 // modify it under the terms of the GNU Lesser General Public License
