@@ -220,7 +220,6 @@ void ListPlatforms() {
     PrintPlatformsInfo( std::cout, platforms );
 }
 
-
 //------------------------------------------------------------------------------
 int main( int argc, char** argv ) {    
     //ListPlatforms();
